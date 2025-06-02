@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Revenue Management</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(3px);
+    }
+
+    #kpiForm {
+      background-image: url('https://images.unsplash.com/photo-1564501049412-61c2a3083791?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+      background-size: cover;
+      background-position: center;
+      padding: 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      background-blend-mode: overlay;
+      background-color: rgba(255,255,255,0.9);
+    }
+
+    .refresh-btn {
+      background-color: #5a3e1b;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+      transition: all 0.3s;
+    }
+
+    .refresh-btn:hover {
+      background-color: #3a2711;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="container" id="dashboard">
+      <div style="text-align: center;">
+        <img src="Capture d’écran 2025-05-13 à 11.28.03 AM.png" alt="Logo Mövenpick" style="width: 140px; margin-bottom: 10px;" />
+      </div>
+
+      <h1>Smart Revenue Management</h1>
+
+      <label>📁 Charger un fichier Excel :
+        <input type="file" id="excelFile" accept=".xlsx"/>
+      </label>
+
+      <form id="kpiForm" onsubmit="return false;">
+        <label>Année :
+          <select id="anneeSelect">
+            <option value="">--Sélectionner--</option>
+            <option>2017</option><option>2018</option><option>2019</option>
+            <option>2020</option><option>2021</option><option>2022</option>
+            <option>2023</option><option>2024</option><option>2025</option>
+          </select>
+        </label>
+        <label>Mois :
+          <select id="moisSelect">
+            <option value="">--Sélectionner--</option>
+            <option>Janvier</option><option>Février</option><option>Mars</option>
+            <option>Avril</option><option>Mai</option><option>Juin</option>
+            <option>Juillet</option><option>Août</option><option>Septembre</option>
+            <option>Octobre</option><option>Novembre</option><option>Décembre</option>
+          </select>
+        </label>
+        <label>ADR (DT): <input type="number" id="adr" step="0.01" placeholder="0.00"/></label>
+        <label>RevPAR (DT): <input type="number" id="revpar" step="0.01" placeholder="0.00"/></label>
+        <label>Taux d'Occupation (%): <input type="number" id="occupancy" min="0" max="100" placeholder="0"/></label>
+        <label>RN (Room Nights): <input type="number" id="rn" placeholder="0"/></label>
+        <label>Revenu (DT): <input type="number" id="revenue" step="0.01" placeholder="0.00"/></label>
+        <button type="button" onclick="analyserDonnees()">Analyser</button>
+      </form>
+
+      <div id="interpretation">
+        <h2>Interprétation des Résultats</h2>
+        <div id="analysisText">Veuillez importer un fichier ou saisir les données manuellement.</div>
+      </div>
+
+      <div id="results">
+        <h2>Résultats & Graphiques</h2>
+        <div class="chart-container">
+          <canvas id="kpiChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="forecastChart"></canvas>
+        </div>
+      </div>
+
+      <button onclick="exportToPDF()">Exporter en PDF</button>
+
+      <footer>
+        <p style="text-align:center; margin-top:30px; color:#5a3e1b;">
+          Projet réalisé par <strong>Mohamed Aziz Lahmer</strong> – Master ISG Sousse 2025
+        </p>
+      </footer>
+    </div>
+
+    <div class="sidebar">
+      <button class="sidebar-btn" onclick="openModal('benchmark-modal')">📊 Benchmark Concurrentiel</button>
+      <button class="sidebar-btn" onclick="openModal('kpi-calculator-modal')">🧮 Calculateur de KPI</button>
+      <button class="sidebar-btn" onclick="openModal('recommendations-modal')">💡 Recommandations Stratégiques</button>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="benchmark-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('benchmark-modal')">&times;</span>
+      <h2>Benchmark Concurrentiel - Sousse</h2>
+      <div class="benchmark-grid">
+        <div class="hotel-card">
+          <h3>Hotel Jaz Tour Khalaf</h3>
+          <p>ADR: <span class="jaz-adr">320</span> DT</p>
+          <p>RevPAR: <span class="jaz-revpar">210</span> DT</p>
+          <p>Occupation: <span class="jaz-occ">65</span>%</p>
+          <button class="refresh-btn" onclick="refreshData('jaz')">Actualiser</button>
+        </div>
+        <div class="hotel-card">
+          <h3>Hotel Marriott Sousse</h3>
+          <p>ADR: <span class="marriott-adr">350</span> DT</p>
+          <p>RevPAR: <span class="marriott-revpar">250</span> DT</p>
+          <p>Occupation: <span class="marriott-occ">71</span>%</p>
+          <button class="refresh-btn" onclick="refreshData('marriott')">Actualiser</button>
+        </div>
+        <div class="hotel-card">
+          <h3>Mövenpick</h3>
+          <p>ADR: <span id="current-adr">-</span> DT</p>
+          <p>RevPAR: <span id="current-revpar">-</span> DT</p>
+          <p>Occupation: <span id="current-occ">-</span>%</p>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="benchmarkChart"></canvas></div>
+    </div>
+  </div>
+
+  <div id="kpi-calculator-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('kpi-calculator-modal')">&times;</span>
+      <h2>Calculateur de KPI</h2>
+      <div class="calculator-tabs">
+        <button class="tab-btn active" onclick="openCalculatorTab('revpar-tab')">RevPAR</button>
+        <button class="tab-btn" onclick="openCalculatorTab('adr-tab')">ADR</button>
+        <button class="tab-btn" onclick="openCalculatorTab('to-tab')">Taux d'Occupation</button>
+      </div>
+      <div id="revpar-tab" class="calculator-tab" style="display: block;">
+        <h3>Calcul du RevPAR</h3><p>RevPAR = ADR × Taux d'Occupation</p>
+        <label>ADR (DT): <input type="number" id="calc-adr" step="0.01"/></label>
+        <label>Taux d'Occupation (%): <input type="number" id="calc-occupancy" min="0" max="100"/></label>
+        <button onclick="calculateRevPAR()">Calculer</button>
+        <div class="result-box"><h4>Résultat:</h4><p id="revpar-result">-</p></div>
+      </div>
+      <div id="adr-tab" class="calculator-tab" style="display: none;">
+        <h3>Calcul de l'ADR</h3><p>ADR = Revenu Total / Nombre de chambres vendues</p>
+        <label>Revenu Total (DT): <input type="number" id="calc-adr-revenue" step="0.01"/></label>
+        <label>Chambres vendues: <input type="number" id="calc-adr-rooms"/></label>
+        <button onclick="calculateADR()">Calculer</button>
+        <div class="result-box"><h4>Résultat:</h4><p id="adr-result">-</p></div>
+      </div>
+      <div id="to-tab" class="calculator-tab" style="display: none;">
+        <h3>Calcul du Taux d'Occupation</h3><p>Taux d'Occupation = (Chambres occupées / Chambres disponibles) × 100</p>
+        <label>Chambres occupées: <input type="number" id="calc-to-occupied"/></label>
+        <label>Chambres disponibles: <input type="number" id="calc-to-available"/></label>
+        <button onclick="calculateTO()">Calculer</button>
+        <div class="result-box"><h4>Résultat:</h4><p id="to-result">-</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="recommendations-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('recommendations-modal')">&times;</span>
+      <h2>Recommandations Stratégiques</h2>
+      <div id="dynamic-recommendations">
+        <p>Analysez vos données pour obtenir des recommandations personnalisées.</p>
+      </div>
+      <div class="strategy-cards">
+        <div class="strategy-card">
+          <h3>📈 Optimisation ADR</h3>
+          <ul id="adr-recommendations">
+            <li>Veuillez analyser vos données pour voir les recommandations</li>
+          </ul>
+        </div>
+        <div class="strategy-card">
+          <h3>🏨 Optimisation Occupation</h3>
+          <ul id="occupancy-recommendations">
+            <li>Veuillez analyser vos données pour voir les recommandations</li>
+          </ul>
+        </div>
+        <div class="strategy-card">
+          <h3>💰 Optimisation Revenue</h3>
+          <ul id="revenue-recommendations">
+            <li>Veuillez analyser vos données pour voir les recommandations</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
